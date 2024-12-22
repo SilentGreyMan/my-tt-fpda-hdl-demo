@@ -1,34 +1,31 @@
 \m5_TLV_version 1d: tl-x.org
 \m5
-
-   // *******************************************
-   // * For ChipCraft Course                    *
-   // * Replace this file with your own design. *
-   // *******************************************
-
-   use(m5-1.0)
+   
+   // =================================================
+   // Welcome!  New to Makerchip? Try the "Learn" menu.
+   // =================================================
+   
+   //use(m5-1.0)   /// uncomment to use M5 macro library.
 \SV
-/*
- * Copyright (c) 2023 Your Name
- * SPDX-License-Identifier: Apache-2.0
- */
-
-`define default_netname none
-
-module tt_um_example (
-    input  wire [7:0] ui_in,    // Dedicated inputs
-    output wire [7:0] uo_out,   // Dedicated outputs
-    input  wire [7:0] uio_in,   // IOs: Bidirectional Input path
-    output wire [7:0] uio_out,  // IOs: Bidirectional Output path
-    output wire [7:0] uio_oe,   // IOs: Bidirectional Enable path (active high: 0=input, 1=output)
-    input  wire       ena,
-    input  wire       clk,
-    input  wire       rst_n
-);
-
-  // All output pins must be assigned. If not used, assign to 0.
-  assign uo_out  = ui_in;  // Example: ou_out is ui_in
-  assign uio_out = 0;
-  assign uio_oe  = 0;
-
-endmodule
+   // Macro providing required top-level module definition, random
+   // stimulus support, and Verilator config.
+   m5_makerchip_module   // (Expanded in Nav-TLV pane.)
+\TLV
+   |calc
+      @1
+         $reset = *reset;
+         $val1[7:0] = (reset) ? 8'b0 : >>1$out;
+         $val2[7:0] = {3'b0, $rand2[4:0]};
+         $sum[7:0] = $val1[7:0] + $val2[7:0];
+         $diff[7:0] = $val1[7:0] - $val2[7:0];
+         $prod[7:0] = $val1[7:0] * $val2[7:0];
+         $quot[7:0] = $val1[7:0] / $val2[7:0];
+         $out[7:0] = $op[1:0] == 2'd0 ? $sum : $op[1:0] == 2'd1 ? $diff : $op[1:0] == 2'd2 ? $prod : $quot;
+   
+   //...
+   
+   // Assert these to end simulation (before Makerchip cycle limit).
+   *passed = *cyc_cnt > 40;
+   *failed = 1'b0;
+\SV
+   endmodule
