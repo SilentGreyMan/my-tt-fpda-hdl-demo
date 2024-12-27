@@ -54,33 +54,45 @@
          $reset = *reset;
          
          // Board's switch inputs
-         $op[1:0] = *ui_in[5:4];
+         $op[2:0] = *ui_in[6:4];
          $val2[7:0] = {4'b0, *ui_in[3:0]};
          $equals_in = *ui_in[7];
          
       @1
          // Calculator result value ($out) becomes first operand ($val1).
-         $val1[7:0] = >>1$out;
+         //when adding pipeline now need val to be 2 back not just 1 so change to 2
+         $val1[7:0] = >>2$out;
          
          // Perform a valid computation when "=" button is pressed.
          $valid = $reset ? 1'b0 :
                            $equals_in && ! >>1$equals_in;
          
          // Calculate (all possible operations).
-         $sum[7:0] = $val1 + $val2;
-         $diff[7:0] = $val1 - $val2;
-         $prod[7:0] = $val1 * $val2;
-         $quot[7:0] = $val1 / $val2;
-         
+         ?$valid
+            $sum[7:0] = $val1 + $val2;
+            $diff[7:0] = $val1 - $val2;
+            $prod[7:0] = $val1 * $val2;
+            $quot[7:0] = $val1 / $val2;
+      
+      // Add the pipeline before the mux so add @2 here
+      @2
          // Select the result value, resetting to 0, and retaining if no calculation.
+         //op 4 is memory recall
+         $memory_recall = $valid && ($op[2:0] == 3'd4);
          $out[7:0] = $reset ? 8'b0 :
                      ! $valid ? >>1$out :
-                     ($op[1:0] == 2'b00) ? $sum  :
-                     ($op[1:0] == 2'b01) ? $diff :
-                     ($op[1:0] == 2'b10) ? $prod :
-                                           $quot;
+                     ($op[2:0] == 3'd0) ? $sum  :
+                     ($op[2:0] == 3'd1) ? $diff :
+                     ($op[2:0] == 3'd2) ? $prod :
+                     ($op[2:0] == 3'd3) ? $quot :
+                     $memory_recall ? >>2$mem[7:0] : >>1$out[7:0];
+         //Memory Mux
+         //op 5 is memory store operation
+         $memory_store = $valid && ($op[2:0] == 3'd5);
+         $mem[7:0] = $reset ? 0 : $memory_store ? >>2$out[7:0] : >>1$mem[7:0];
          
-         
+      //Give another cycle for the display to add another pipleline here
+      @3
          // Display lower hex digit on 7-segment display.
          $digit[3:0] = $out[3:0];
          *uo_out =
@@ -102,7 +114,8 @@
                              8'b01110001;
          
          
-   m5+cal_viz(@1, m5_if(m5_in_fpga, /fpga, /top))
+      //change from @1 to @3 for cal_viz
+   m5+cal_viz(@3, m5_if(m5_in_fpga, /fpga, /top))
    
    // Connect Tiny Tapeout outputs. Note that uio_ outputs are not available in the Tiny-Tapeout-3-based FPGA boards.
    //*uo_out = 8'b0;
@@ -131,7 +144,7 @@ module top(input logic clk, input logic reset, input logic [31:0] cyc_cnt, outpu
    // Instantiate the Tiny Tapeout module.
    m5_user_module_name tt(.*);
    
-   assign passed = top.cyc_cnt > 80;
+   assign passed = top.cyc_cnt > 160;
    assign failed = 1'b0;
 endmodule
 
