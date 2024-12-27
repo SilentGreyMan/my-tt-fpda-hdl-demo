@@ -14,7 +14,7 @@
    // ========
    
    var(my_design, tt_um_example)   /// The name of your top-level TT module, to match your info.yml.
-   var(debounce_inputs, 0)
+   var(debounce_inputs, 1)
           /// Legal values:
           ///   1: Provide synchronization and debouncing on all input signals.
           ///   0: Don't provide synchronization and debouncing.
